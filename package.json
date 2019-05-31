@@ -1,0 +1,17 @@
+{
+  "name": "qmsn",
+  "version": "0.0.1",
+  "description": "Queue Management System Written in NodeJs",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha",
+    "start": "nodemon ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^8.0.0",
+    "mysql2": "^1.6.5",
+    "redis": "^2.8.0"
+  }
+}
