@@ -33,7 +33,7 @@ ENV \
  ES_VERSION=${ELK_VERSION} \
  ES_HOME=/opt/elasticsearch \
  LOGSTASH_VERSION=${ELK_VERSION} \
- LOGSTASH_HOME=/opt/logstash
+ LOGSTASH_HOME=/opt/logstash \
  APM_VERSION=${ELK_VERSION} \
  APM_HOME=/opt/apm
 
@@ -78,16 +78,16 @@ RUN mkdir ${LOGSTASH_HOME} \
  && chown -R logstash:logstash ${LOGSTASH_HOME} /var/log/logstash ${LOGSTASH_PATH_CONF}
 
 ENV \
- APM_PACKAGE=apm-${APM_VERSION}.tar.gz \
- APM_GID=992 \
- APM_UID=992 \
+ APM_PACKAGE=apm-server-${APM_VERSION}-linux-x86_64.tar.gz \
+ APM_GID=994 \
+ APM_UID=994 \
  APM_PATH_CONF=/etc/logstash \
  APM_PATH_SETTINGS=${APM_HOME}/config
 
 RUN mkdir ${APM_HOME} \
- && curl -O https://artifacts.elastic.co/downloads/apm-server/apm-server-${AMP_PACKAGE}-linux-x86_64.tar.gz \
- && tar xzf ${AMP_PACKAGE} -C ${APM_HOME} --strip-components=1 \
- && rm -f ${AMP_PACKAGE} \
+ && curl -O https://artifacts.elastic.co/downloads/apm-server/${APM_PACKAGE} \
+ && tar xzf ${APM_PACKAGE} -C ${APM_HOME} --strip-components=1 \
+ && rm -f ${APM_PACKAGE} \
  && groupadd -r apm -g ${APM_GID} \
  && useradd -r -s /usr/sbin/nologin -d ${APM_HOME} -c "APM service user" -u ${APM_UID} -g apm apm \
  && mkdir -p /var/log/apm ${APM_PATH_CONF}/conf.d \
@@ -127,6 +127,13 @@ RUN sed -i -e 's#^ES_HOME=$#ES_HOME='$ES_HOME'#' /etc/init.d/elasticsearch \
 ADD ./logstash-init /etc/init.d/logstash
 RUN sed -i -e 's#^LS_HOME=$#LS_HOME='$LOGSTASH_HOME'#' /etc/init.d/logstash \
  && chmod +x /etc/init.d/logstash
+
+### APM
+
+ADD ./apm-init /etc/init.d/apm
+COPY ./apm-server.yml /opt/${APM_HOME}
+RUN sed -i -e 's#^APM_HOME=$#APM_HOME='$APM_HOME'#' /etc/init.d/apm \
+ && chmod +x /etc/init.d/apm
 
 ### Kibana
 
@@ -194,7 +201,7 @@ ADD ./kibana.yml ${KIBANA_HOME}/config/kibana.yml
 ADD ./start.sh /usr/local/bin/start.sh
 RUN chmod +x /usr/local/bin/start.sh
 
-EXPOSE 5601 9200 9300 5044
+EXPOSE 5601 9200 9300 5044 8200
 VOLUME /var/lib/elasticsearch
 
 CMD [ "/usr/local/bin/start.sh" ]
