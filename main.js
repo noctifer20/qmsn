@@ -1,72 +1,73 @@
 const redis = require('redis');
 const publisher = redis.createClient();
 const subscriber = redis.createClient();
-const mysql = require('mysql2');
-const Redis1 = require('./lib/utils/redis')
-
-
-
-/*const connection = mysql.createConnection({
-  host     : 'localhost',
-  user     : 'root',
-  password : '1111',
-  database : 'testdb'
-});
-
-// connection.connect();
-//
-//
-// connection.query('SELECT * from users where id = 159 limit 500', function (error, results, fields) {
-//   if (error) throw error;
-//   console.log('The solution is: ', results);
-// });*/
-
+const Redis1 = require('./lib/utils/redis');
 
 
 class Main {
   constructor() {
     this.id = process.env.id;
-    // this.msDb = this.connection();
+    this.limit= 0;
     this.subscriberOn = 'message';
-    this.publishTO = 'startTask';
     this.subscribeTo = 'taskEnd';
     this.redisdb = new Redis1(publisher, subscriber);
+    this.defaultFilter = 'where gender = 1';
     this.initSubscriber();
+    this.redisdb.publishAndAdd('filter',{ filter: this.defaultFilter } );
 
   }
 
   async initSubscriber(){
     this.redisdb.subscriberon(this.subscriberOn, (channel, message) => {
-      console.log('got ', channel);
       message = JSON.parse(message);
-      console.log("main-----", channel, message);
 
-
-
-
-      // this.publishAndAdd(this.publishTO,{ id: message.id, range: 1000 } )
+      if (channel === 'taskEnd') {
+        this.incrementLimit(message.serverName)
+      }
     });
 
     this.redisdb.subscribe(this.subscribeTo);
     this.redisdb.subscribe('startServer');
-    this.redisdb.publishAndAdd(this.publishTO,{ range: 1000 } );
-
-    console.log('blllll-----', await this.redisdb.keys('server_*'));
-
+    this.checkingServerToReady();
 
   }
 
-  process() {}
+  checkingServerToReady(){
+    const interval =  setInterval(async () => {
+      const serverName = await this.redisdb.keys('server_*');
+      const { length } = serverName;
+      if (length ===  4) {
+        for(let j = 0; j < length; j++){
+          const server = await this.redisdb.get(serverName[j]);
+          if (!server[serverName[j]]) {
+            this.redisdb.get(serverName[j]);
+            this.limit  = j + 1;
+            this.redisdb.publishAndAdd(serverName[j],{ offset: this.limit} );
+            this.redisdb.publishAndAdd(serverName[j],{ [serverName[j]]: true } );
+          }
+        }
+        console.log("start",  new Date().getHours(), new Date().getMinutes(), new Date().getMilliseconds())
 
 
-  // connection(){
-  //   return mysql.createConnection({
-  //     host: 'localhost',
-  //     user: 'root',
-  //     password: 1111,
-  //     database: 'testdb'
-  //   });
-  // }
+        clearInterval(interval);
+
+      }
+    }, 1000);
+
+  }
+
+  async incrementLimit(serverName){
+    const { filter }= await this.redisdb.get('filter');
+    if (!filter) {
+      this.limit = 0;
+      console.log("end",  new Date().getHours(), new Date().getMinutes(), new Date().getMilliseconds())
+
+      return;
+    }
+
+    this.limit += 1;
+    this.redisdb.publishAndAdd(serverName,{ offset: this.limit } );
+  }
 
 }
-new Main()
+new Main();
