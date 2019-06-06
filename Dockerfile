@@ -118,26 +118,26 @@ RUN mkdir ${KIBANA_HOME} \
 
 ### Elasticsearch
 
-ADD ./elasticsearch-init /etc/init.d/elasticsearch
+ADD ./elk/elasticsearch/elasticsearch-init /etc/init.d/elasticsearch
 RUN sed -i -e 's#^ES_HOME=$#ES_HOME='$ES_HOME'#' /etc/init.d/elasticsearch \
  && chmod +x /etc/init.d/elasticsearch
 
 ### Logstash
 
-ADD ./logstash-init /etc/init.d/logstash
+ADD ./elk/logstash/logstash-init /etc/init.d/logstash
 RUN sed -i -e 's#^LS_HOME=$#LS_HOME='$LOGSTASH_HOME'#' /etc/init.d/logstash \
  && chmod +x /etc/init.d/logstash
 
 ### APM
 
-ADD ./apm-init /etc/init.d/apm
-COPY ./apm-server.yml /opt/${APM_HOME}
+ADD ./elk/apm/apm-init /etc/init.d/apm
+COPY elk/apm/apm-server.yml /opt/${APM_HOME}
 RUN sed -i -e 's#^APM_HOME=$#APM_HOME='$APM_HOME'#' /etc/init.d/apm \
  && chmod +x /etc/init.d/apm
 
 ### Kibana
 
-ADD ./kibana-init /etc/init.d/kibana
+ADD ./elk/kibana/kibana-init /etc/init.d/kibana
 RUN sed -i -e 's#^KIBANA_HOME=$#KIBANA_HOME='$KIBANA_HOME'#' /etc/init.d/kibana \
  && chmod +x /etc/init.d/kibana
 
@@ -148,8 +148,8 @@ RUN sed -i -e 's#^KIBANA_HOME=$#KIBANA_HOME='$KIBANA_HOME'#' /etc/init.d/kibana 
 
 ### configure Elasticsearch
 
-ADD ./elasticsearch.yml ${ES_PATH_CONF}/elasticsearch.yml
-ADD ./elasticsearch-default /etc/default/elasticsearch
+ADD elk/elasticsearch/elasticsearch.yml ${ES_PATH_CONF}/elasticsearch.yml
+ADD elk/elasticsearch/elasticsearch-default /etc/default/elasticsearch
 RUN cp ${ES_HOME}/config/log4j2.properties ${ES_HOME}/config/jvm.options \
     ${ES_PATH_CONF} \
  && chown -R elasticsearch:elasticsearch ${ES_PATH_CONF} \
@@ -159,20 +159,20 @@ RUN cp ${ES_HOME}/config/log4j2.properties ${ES_HOME}/config/jvm.options \
 
 # certs/keys for Beats and Lumberjack input
 RUN mkdir -p /etc/pki/tls/certs && mkdir /etc/pki/tls/private
-ADD ./logstash-beats.crt /etc/pki/tls/certs/logstash-beats.crt
-ADD ./logstash-beats.key /etc/pki/tls/private/logstash-beats.key
+ADD elk/logstash/logstash-beats.crt /etc/pki/tls/certs/logstash-beats.crt
+ADD elk/logstash/logstash-beats.key /etc/pki/tls/private/logstash-beats.key
 
 # pipelines
-ADD pipelines.yml ${LOGSTASH_PATH_SETTINGS}/pipelines.yml
+ADD elk/logstash/pipelines.yml ${LOGSTASH_PATH_SETTINGS}/pipelines.yml
 
 # filters
-ADD ./02-beats-input.conf ${LOGSTASH_PATH_CONF}/conf.d/02-beats-input.conf
-ADD ./10-syslog.conf ${LOGSTASH_PATH_CONF}/conf.d/10-syslog.conf
-ADD ./11-nginx.conf ${LOGSTASH_PATH_CONF}/conf.d/11-nginx.conf
-ADD ./30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
+ADD elk/config/02-beats-input.conf ${LOGSTASH_PATH_CONF}/conf.d/02-beats-input.conf
+ADD elk/config/10-syslog.conf ${LOGSTASH_PATH_CONF}/conf.d/10-syslog.conf
+ADD elk/config/11-nginx.conf ${LOGSTASH_PATH_CONF}/conf.d/11-nginx.conf
+ADD elk/config/30-output.conf ${LOGSTASH_PATH_CONF}/conf.d/30-output.conf
 
 # patterns
-ADD ./nginx.pattern ${LOGSTASH_HOME}/patterns/nginx
+ADD elk/config/nginx.pattern ${LOGSTASH_HOME}/patterns/nginx
 RUN chown -R logstash:logstash ${LOGSTASH_HOME}/patterns
 
 # Fix permissions
@@ -181,9 +181,9 @@ RUN chmod -R +r ${LOGSTASH_PATH_CONF} ${LOGSTASH_PATH_SETTINGS} \
 
 ### configure logrotate
 
-ADD ./elasticsearch-logrotate /etc/logrotate.d/elasticsearch
-ADD ./logstash-logrotate /etc/logrotate.d/logstash
-ADD ./kibana-logrotate /etc/logrotate.d/kibana
+ADD elk/elasticsearch/elasticsearch-logrotate /etc/logrotate.d/elasticsearch
+ADD elk/logstash/logstash-logrotate /etc/logrotate.d/logstash
+ADD elk/kibana/kibana-logrotate /etc/logrotate.d/kibana
 RUN chmod 644 /etc/logrotate.d/elasticsearch \
  && chmod 644 /etc/logrotate.d/logstash \
  && chmod 644 /etc/logrotate.d/kibana
@@ -191,7 +191,11 @@ RUN chmod 644 /etc/logrotate.d/elasticsearch \
 
 ### configure Kibana
 
-ADD ./kibana.yml ${KIBANA_HOME}/config/kibana.yml
+ADD elk/kibana/kibana.yml ${KIBANA_HOME}/config/kibana.yml
+
+### configure APM
+
+ADD elk/apm/apm-server.yml ${APM_HOME}/apm-server.yml
 
 
 ###############################################################################

@@ -1,0 +1,5 @@
+apm-server:
+  host: "0.0.0.0:8200"
+  allow_origins: ['*']
+output.elasticsearch:
+  hosts: ["0.0.0.0:9200"]
